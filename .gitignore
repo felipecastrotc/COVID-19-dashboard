@@ -1,0 +1,7 @@
+__pycache__/
+csse_covid_19_data
+venv
+
+*.pyc
+.DS_Store
+.env

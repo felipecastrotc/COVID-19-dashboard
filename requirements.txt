@@ -1,0 +1,9 @@
+gunicorn==19.9.0
+json==2.0.9 
+numpy==1.16.4 
+pandas==0.24.2 
+scipy==1.2.1 
+uncertainties==3.1.2 
+matplotlib==3.0.3 
+sklearn==0.20.3 
+dash==1.0.0
