@@ -75,9 +75,6 @@ pred_lyt = []
 
 grab_click = 0
 clear_click = None
-# Queue
-q = queue.Queue(10)
-
 
 app.title = "COVID-19 - Status & Predictions"
 
