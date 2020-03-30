@@ -10,7 +10,6 @@ import numpy as np
 from utils import *
 from datetime import timedelta
 import datetime
-import queue
 import json
 
 import urllib.parse
@@ -127,7 +126,8 @@ app.layout = html.Div(
                     [
                         html.Div(
                             [
-                                html.H3("COVID-19", style={"margin-bottom": "0px"},),
+                                html.H3(
+                                    "COVID-19", style={"margin-bottom": "0px"},),
                                 html.H5(
                                     "Status & Predictions", style={"margin-top": "0px"}
                                 ),
@@ -156,7 +156,8 @@ app.layout = html.Div(
             [
                 html.Div(
                     [
-                        html.P("Temporal evolution:", className="control_label"),
+                        html.P("Temporal evolution:",
+                               className="control_label"),
                         dcc.RadioItems(
                             id="temporal_status_selector",
                             options=[
@@ -201,7 +202,8 @@ app.layout = html.Div(
                         ),
                         html.Div(
                             [
-                                dcc.Markdown("""The model is presented below:"""),
+                                dcc.Markdown(
+                                    """The model is presented below:"""),
                                 html.P(id="mdl_unc_txt"),
                                 html.P(id="mdl_eq_txt"),
                             ],
@@ -313,6 +315,7 @@ app.layout = html.Div(
         html.Div(id="stored_graph_data", style={"display": "none"}),
         html.Div(id="clear_nclick_data", style={"display": "none"}),
         html.Div(id="grab_nclick_data", style={"display": "none"}),
+        html.Div(id="model_data", style={"display": "none"}),
     ],
     id="mainContainer",
     style={"display": "flex", "flex-direction": "column"},
@@ -330,50 +333,60 @@ app.clientside_callback(
 # Update status text
 @app.callback(
     Output("cases_tot_txt", "children"),
-    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
+    [Input("countries_slct", "value"), Input(
+        "temporal_status_selector", "value"), ],
 )
 def update_cases_text(countries_slct, temporal_status_selector):
     # Slice data
     slc_date = slice("2020-01-22", None)
-    df_view = df.loc[(countries_slct, "confirmed"), slc_date].groupby(CTRY_K).sum().T
+    df_view = df.loc[(countries_slct, "confirmed"),
+                     slc_date].groupby(CTRY_K).sum().T
     # Get data
     return "{:,}".format(df_view.max().sum())
 
 
 @app.callback(
     Output("deaths_tot_txt", "children"),
-    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
+    [Input("countries_slct", "value"), Input(
+        "temporal_status_selector", "value"), ],
 )
 def update_deaths_text(countries_slct, temporal_status_selector):
     # Slice data
     slc_date = slice("2020-01-22", None)
-    df_view = df.loc[(countries_slct, "deaths"), slc_date].groupby(CTRY_K).sum().T
+    df_view = df.loc[(countries_slct, "deaths"),
+                     slc_date].groupby(CTRY_K).sum().T
     # Get data
     return "{:,}".format(df_view.max().sum())
 
 
 @app.callback(
     Output("recv_tot_txt", "children"),
-    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
+    [Input("countries_slct", "value"), Input(
+        "temporal_status_selector", "value"), ],
 )
 def update_recovered_text(countries_slct, temporal_status_selector):
     # Slice data
     slc_date = slice("2020-01-22", None)
-    df_view = df.loc[(countries_slct, "recovered"), slc_date].groupby(CTRY_K).sum().T
+    df_view = df.loc[(countries_slct, "recovered"),
+                     slc_date].groupby(CTRY_K).sum().T
     # Get data
     return "{:,}".format(df_view.max().sum())
 
 
 @app.callback(
     Output("act_tot_txt", "children"),
-    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
+    [Input("countries_slct", "value"), Input(
+        "temporal_status_selector", "value"), ],
 )
 def update_active_text(countries_slct, temporal_status_selector):
     # Slice data
     slc_date = slice("2020-01-22", None)
-    df_cview = df.loc[(countries_slct, "confirmed"), slc_date].groupby(CTRY_K).sum().T
-    df_dview = df.loc[(countries_slct, "deaths"), slc_date].groupby(CTRY_K).sum().T
-    df_rview = df.loc[(countries_slct, "recovered"), slc_date].groupby(CTRY_K).sum().T
+    df_cview = df.loc[(countries_slct, "confirmed"),
+                      slc_date].groupby(CTRY_K).sum().T
+    df_dview = df.loc[(countries_slct, "deaths"),
+                      slc_date].groupby(CTRY_K).sum().T
+    df_rview = df.loc[(countries_slct, "recovered"),
+                      slc_date].groupby(CTRY_K).sum().T
     # Get data
     act = "{:,}".format(
         df_cview.max().sum() - df_dview.max().sum() - df_rview.max().sum()
@@ -382,16 +395,9 @@ def update_active_text(countries_slct, temporal_status_selector):
 
 
 @app.callback(
-    Output("mdl_eq_txt", "children"),
-    [
-        Input("country_slct", "value"),
-        Input("prediction_status_selector", "value"),
-        Input("date_slider_pred", "value"),
-        Input("clear_graph_bt", "value"),
-    ],
+    Output("mdl_eq_txt", "children"), [Input("model_data", "children"), ],
 )
-# TODO: remove the queue implementation
-def upd_equation(ctry, sts, sldr_idx, clr):
+def upd_equation(mdl):
     """
     Updates the equation.
 
@@ -410,12 +416,12 @@ def upd_equation(ctry, sts, sldr_idx, clr):
     """
     # Get fit data
     try:
-        fit = q.get(timeout=5)
+        fit = json.loads(mdl)
         # $$y = \frac{a}{1 + e^{-b*(x - x_0)}}$$
 
-        x0 = fit["x0"].nominal_value
-        a = fit["a"].nominal_value
-        b = fit["b"].nominal_value
+        x0 = fit["x0"]
+        a = fit["a"]
+        b = fit["b"]
 
         txt = r"$$y = \frac{" + "{:d}".format(int(a))
         txt += r"}{1 + e^{-" + "{:.3e}".format(b)
@@ -431,7 +437,8 @@ def upd_equation(ctry, sts, sldr_idx, clr):
 
 
 @app.callback(
-    Output("date_selected", "children"), [Input("date_slider_pred", "value"),],
+    Output("date_selected", "children"), [
+        Input("date_slider_pred", "value"), ],
 )
 def upd_slider_slected(sldr_idx):
     return "Date selected: " + dates_arr[sldr_idx].strftime("%d/%m/%y")
@@ -542,14 +549,20 @@ def gen_graph(graphs):
     dict: A plotly figure
 
     """
-    data = [gr_dt for gr in graphs for gr_dt in gr["data"]]
-    layout = graphs[-1]["layout"]
-    return dict(data=data, layout=layout)
+    if type(graphs) == list:
+        graphs = [i for i in graphs if i]
+        if len(graphs) > 0:
+            data = [gr_dt for gr in graphs for gr_dt in gr["data"]]
+            layout = graphs[-1]["layout"]
+            return dict(data=data, layout=layout)
+    else:
+        pass
 
 
 @app.callback(
     Output("status_graph", "figure"),
-    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
+    [Input("countries_slct", "value"), Input(
+        "temporal_status_selector", "value"), ],
 )
 def upd_status_graph(ctry, sts):
     """
@@ -688,7 +701,8 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
             name="95% Confidence region",
             x=np.hstack([days, pred_day]),
             y=y_nom[day_start:] - 1.96 * y_std[day_start:],
-            line=dict(shape="spline", smoothing=2, width=1, color="gray", dash="dash"),
+            line=dict(shape="spline", smoothing=2,
+                      width=1, color="gray", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -697,7 +711,8 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
             showlegend=False,
             x=np.hstack([days, pred_day]),
             y=y_nom[day_start:] + 1.96 * y_std[day_start:],
-            line=dict(shape="spline", smoothing=2, width=1, color="gray", dash="dash"),
+            line=dict(shape="spline", smoothing=2,
+                      width=1, color="gray", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -705,7 +720,8 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
             name="95% Prediction band",
             x=np.hstack([days, pred_day]),
             y=up_band[day_start:],
-            line=dict(shape="spline", smoothing=2, width=1, color="black", dash="dash"),
+            line=dict(shape="spline", smoothing=2,
+                      width=1, color="black", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -714,7 +730,8 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
             showlegend=False,
             x=np.hstack([days, pred_day]),
             y=lw_band[day_start:],
-            line=dict(shape="spline", smoothing=2, width=1, color="black", dash="dash"),
+            line=dict(shape="spline", smoothing=2,
+                      width=1, color="black", dash="dash"),
         ),
     ]
 
@@ -729,7 +746,7 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
 
 
 @app.callback(
-    Output("new_graph_data", "children"),
+    [Output("new_graph_data", "children"), Output("model_data", "children")],
     [
         Input("country_slct", "value"),
         Input("prediction_status_selector", "value"),
@@ -771,8 +788,6 @@ def upd_pred_graph(ctry, sts, sldr_idx):
 
     # Sigmoid fit
     x0, a, b, fit = fit_curve(df, ctry, sts, start_date, end_date=end_date)
-    q.put(fit)
-    # q.put(fit)
 
     n_days += fit["y_data"].shape[0]
     lw_band, up_band, y_nom, y_std = cases_ci(x0, a, b, n_days, fit["y_data"])
@@ -821,7 +836,8 @@ def upd_pred_graph(ctry, sts, sldr_idx):
             name="95% Confidence region",
             x=np.hstack([days, pred_day]),
             y=y_nom[day_start:] - 1.96 * y_std[day_start:],
-            line=dict(shape="spline", smoothing=2, width=1, color="gray", dash="dash"),
+            line=dict(shape="spline", smoothing=2,
+                      width=1, color="gray", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -830,7 +846,8 @@ def upd_pred_graph(ctry, sts, sldr_idx):
             showlegend=False,
             x=np.hstack([days, pred_day]),
             y=y_nom[day_start:] + 1.96 * y_std[day_start:],
-            line=dict(shape="spline", smoothing=2, width=1, color="gray", dash="dash"),
+            line=dict(shape="spline", smoothing=2,
+                      width=1, color="gray", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -838,7 +855,8 @@ def upd_pred_graph(ctry, sts, sldr_idx):
             name="95% Prediction band",
             x=np.hstack([days, pred_day]),
             y=up_band[day_start:],
-            line=dict(shape="spline", smoothing=2, width=1, color="black", dash="dash"),
+            line=dict(shape="spline", smoothing=2,
+                      width=1, color="black", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -847,7 +865,8 @@ def upd_pred_graph(ctry, sts, sldr_idx):
             showlegend=False,
             x=np.hstack([days, pred_day]),
             y=lw_band[day_start:],
-            line=dict(shape="spline", smoothing=2, width=1, color="black", dash="dash"),
+            line=dict(shape="spline", smoothing=2,
+                      width=1, color="black", dash="dash"),
         ),
     ]
 
@@ -861,7 +880,8 @@ def upd_pred_graph(ctry, sts, sldr_idx):
     layout_individual["yaxis_title"] = "Days"
     figure = dict(data=data, layout=layout_individual)
 
-    return json.dumps(figure, cls=NpEncoder)
+    fit = {"x0": x0.nominal_value, "a": a.nominal_value, "b": b.nominal_value}
+    return json.dumps(figure, cls=NpEncoder), json.dumps(fit)
 
 
 # Main
