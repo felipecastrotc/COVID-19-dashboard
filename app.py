@@ -127,8 +127,7 @@ app.layout = html.Div(
                     [
                         html.Div(
                             [
-                                html.H3(
-                                    "COVID-19", style={"margin-bottom": "0px"},),
+                                html.H3("COVID-19", style={"margin-bottom": "0px"},),
                                 html.H5(
                                     "Status & Predictions", style={"margin-top": "0px"}
                                 ),
@@ -157,8 +156,7 @@ app.layout = html.Div(
             [
                 html.Div(
                     [
-                        html.P("Temporal evolution:",
-                               className="control_label"),
+                        html.P("Temporal evolution:", className="control_label"),
                         dcc.RadioItems(
                             id="temporal_status_selector",
                             options=[
@@ -203,8 +201,7 @@ app.layout = html.Div(
                         ),
                         html.Div(
                             [
-                                dcc.Markdown(
-                                    """The model is presented below:"""),
+                                dcc.Markdown("""The model is presented below:"""),
                                 html.P(id="mdl_unc_txt"),
                                 html.P(id="mdl_eq_txt"),
                             ],
@@ -333,60 +330,50 @@ app.clientside_callback(
 # Update status text
 @app.callback(
     Output("cases_tot_txt", "children"),
-    [Input("countries_slct", "value"), Input(
-        "temporal_status_selector", "value"), ],
+    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
 )
 def update_cases_text(countries_slct, temporal_status_selector):
     # Slice data
     slc_date = slice("2020-01-22", None)
-    df_view = df.loc[(countries_slct, "confirmed"),
-                     slc_date].groupby(CTRY_K).sum().T
+    df_view = df.loc[(countries_slct, "confirmed"), slc_date].groupby(CTRY_K).sum().T
     # Get data
     return "{:,}".format(df_view.max().sum())
 
 
 @app.callback(
     Output("deaths_tot_txt", "children"),
-    [Input("countries_slct", "value"), Input(
-        "temporal_status_selector", "value"), ],
+    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
 )
 def update_deaths_text(countries_slct, temporal_status_selector):
     # Slice data
     slc_date = slice("2020-01-22", None)
-    df_view = df.loc[(countries_slct, "deaths"),
-                     slc_date].groupby(CTRY_K).sum().T
+    df_view = df.loc[(countries_slct, "deaths"), slc_date].groupby(CTRY_K).sum().T
     # Get data
     return "{:,}".format(df_view.max().sum())
 
 
 @app.callback(
     Output("recv_tot_txt", "children"),
-    [Input("countries_slct", "value"), Input(
-        "temporal_status_selector", "value"), ],
+    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
 )
 def update_recovered_text(countries_slct, temporal_status_selector):
     # Slice data
     slc_date = slice("2020-01-22", None)
-    df_view = df.loc[(countries_slct, "recovered"),
-                     slc_date].groupby(CTRY_K).sum().T
+    df_view = df.loc[(countries_slct, "recovered"), slc_date].groupby(CTRY_K).sum().T
     # Get data
     return "{:,}".format(df_view.max().sum())
 
 
 @app.callback(
     Output("act_tot_txt", "children"),
-    [Input("countries_slct", "value"), Input(
-        "temporal_status_selector", "value"), ],
+    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
 )
 def update_active_text(countries_slct, temporal_status_selector):
     # Slice data
     slc_date = slice("2020-01-22", None)
-    df_cview = df.loc[(countries_slct, "confirmed"),
-                      slc_date].groupby(CTRY_K).sum().T
-    df_dview = df.loc[(countries_slct, "deaths"),
-                      slc_date].groupby(CTRY_K).sum().T
-    df_rview = df.loc[(countries_slct, "recovered"),
-                      slc_date].groupby(CTRY_K).sum().T
+    df_cview = df.loc[(countries_slct, "confirmed"), slc_date].groupby(CTRY_K).sum().T
+    df_dview = df.loc[(countries_slct, "deaths"), slc_date].groupby(CTRY_K).sum().T
+    df_rview = df.loc[(countries_slct, "recovered"), slc_date].groupby(CTRY_K).sum().T
     # Get data
     act = "{:,}".format(
         df_cview.max().sum() - df_dview.max().sum() - df_rview.max().sum()
@@ -444,8 +431,7 @@ def upd_equation(ctry, sts, sldr_idx, clr):
 
 
 @app.callback(
-    Output("date_selected", "children"), [
-        Input("date_slider_pred", "value"), ],
+    Output("date_selected", "children"), [Input("date_slider_pred", "value"),],
 )
 def upd_slider_slected(sldr_idx):
     return "Date selected: " + dates_arr[sldr_idx].strftime("%d/%m/%y")
@@ -563,8 +549,7 @@ def gen_graph(graphs):
 
 @app.callback(
     Output("status_graph", "figure"),
-    [Input("countries_slct", "value"), Input(
-        "temporal_status_selector", "value"), ],
+    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
 )
 def upd_status_graph(ctry, sts):
     """
@@ -703,8 +688,7 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
             name="95% Confidence region",
             x=np.hstack([days, pred_day]),
             y=y_nom[day_start:] - 1.96 * y_std[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="gray", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="gray", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -713,8 +697,7 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
             showlegend=False,
             x=np.hstack([days, pred_day]),
             y=y_nom[day_start:] + 1.96 * y_std[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="gray", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="gray", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -722,8 +705,7 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
             name="95% Prediction band",
             x=np.hstack([days, pred_day]),
             y=up_band[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="black", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="black", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -732,8 +714,7 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
             showlegend=False,
             x=np.hstack([days, pred_day]),
             y=lw_band[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="black", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="black", dash="dash"),
         ),
     ]
 
@@ -840,8 +821,7 @@ def upd_pred_graph(ctry, sts, sldr_idx):
             name="95% Confidence region",
             x=np.hstack([days, pred_day]),
             y=y_nom[day_start:] - 1.96 * y_std[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="gray", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="gray", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -850,8 +830,7 @@ def upd_pred_graph(ctry, sts, sldr_idx):
             showlegend=False,
             x=np.hstack([days, pred_day]),
             y=y_nom[day_start:] + 1.96 * y_std[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="gray", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="gray", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -859,8 +838,7 @@ def upd_pred_graph(ctry, sts, sldr_idx):
             name="95% Prediction band",
             x=np.hstack([days, pred_day]),
             y=up_band[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="black", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="black", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -869,8 +847,7 @@ def upd_pred_graph(ctry, sts, sldr_idx):
             showlegend=False,
             x=np.hstack([days, pred_day]),
             y=lw_band[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="black", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="black", dash="dash"),
         ),
     ]
 
