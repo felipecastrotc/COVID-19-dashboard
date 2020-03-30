@@ -1,4 +1,5 @@
-gunicorn==19.9.0certifi==2019.11.28
+gunicorn==19.9.0
+certifi==2019.11.28
 click==7.1.1
 cycler==0.10.0
 dash==1.4.1
