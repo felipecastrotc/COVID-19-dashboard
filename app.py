@@ -546,14 +546,18 @@ def gen_graph(graphs):
     dict: A plotly figure
 
     """
-    if type(graphs) == list:
-        graphs = [i for i in graphs if i]
-        if len(graphs) > 0:
-            data = [gr_dt for gr in graphs for gr_dt in gr["data"]]
-            layout = graphs[-1]["layout"]
-            return dict(data=data, layout=layout)
-    else:
-        pass
+    # if type(graphs) == list:
+    #     graphs = [i for i in graphs if i]
+    #     if len(graphs) > 0:
+    data = []
+    layout = []
+    for gr in graphs:
+        if gr:
+            for gr_dt in gr["data"]:
+                data += [gr_dt]
+            layout = gr["layout"]
+
+    return dict(data=data, layout=layout)
 
 
 @app.callback(
