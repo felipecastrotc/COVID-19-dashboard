@@ -493,7 +493,7 @@ def grab_clear_graph(nw_graph, g_clk, c_clk, graphs, curr_graph, g_clkd, c_clkd)
     try:
         graphs = json.loads(graphs)  # list of figures
     except:
-        graphs = []
+        graphs = [None]
     try:
         curr_graph = json.loads(curr_graph)  # figure
     except:
@@ -518,7 +518,7 @@ def grab_clear_graph(nw_graph, g_clk, c_clk, graphs, curr_graph, g_clkd, c_clkd)
         out_graph = curr_graph
     elif c_clk > c_clkd:
         # Clear button pressed
-        graphs = []
+        graphs = [None]
         out_graph = nw_graph
         curr_graph = out_graph
     else:
