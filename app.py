@@ -397,6 +397,21 @@ def upd_equation(mdl):
 
     """
     # Get fit data
+    def convert(text):
+
+        def toimage(x):
+            if x[1] and x[-2] == r"$":
+                x = x[2:-2]
+                img = "\n<img src='https://math.now.sh?from={}'>\n"
+                return img.format(urllib.parse.quote_plus(x))
+            else:
+                x = x[1:-1]
+                return r"![](https://math.now.sh?from={})".format(
+                    urllib.parse.quote_plus(x)
+                )
+
+        return re.sub(r"\${2}([^$]+)\${2}|\$(.+?)\$", lambda x: toimage(x.group()), text)
+
     try:
         fit = json.loads(mdl)
         # $$y = \frac{a}{1 + e^{-b*(x - x_0)}}$$
@@ -504,11 +519,19 @@ def grab_clear_graph(nw_graph, g_clk, c_clk, graphs, curr_graph, g_clkd, c_clkd)
     elif c_clk > c_clkd:
         # Clear button pressed
         graphs = []
-        out_graph = gen_graph([nw_graph])
+        out_graph = nw_graph
         curr_graph = out_graph
     else:
         # New graph generated
-        out_graph = gen_graph(graphs + [nw_graph])
+        graphs_tmp = graphs + [nw_graph]
+        data = []
+        layout = []
+        for gr in graphs_tmp:
+            if gr:
+                for gr_dt in gr["data"]:
+                    data += [gr_dt]
+                layout = gr["layout"]
+        out_graph = dict(data=data, layout=layout)
         curr_graph = out_graph
 
     # Store the graphs in a JSON string and then a html.Div
