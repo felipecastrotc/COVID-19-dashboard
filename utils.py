@@ -195,3 +195,45 @@ class NpEncoder(json.JSONEncoder):
             return obj.tolist()
         else:
             return super(NpEncoder, self).default(obj)
+
+
+def gen_graph(graphs):
+    """
+    List of plotly figures -> plotly figure
+
+    Convert a list of plotly figures (dictionaries) to a single plotly figure.
+
+    Parameters:
+    graph (list): list of plotly figures 
+
+    Returns:
+    dict: A plotly figure
+
+    """
+    # if type(graphs) == list:
+    #     graphs = [i for i in graphs if i]
+    #     if len(graphs) > 0:
+    data = []
+    layout = []
+    for gr in graphs:
+        if gr:
+            for gr_dt in gr["data"]:
+                data += [gr_dt]
+            layout = gr["layout"]
+
+    return dict(data=data, layout=layout)
+
+
+def convert(text):
+    def toimage(x):
+        if x[1] and x[-2] == r"$":
+            x = x[2:-2]
+            img = "\n<img src='https://math.now.sh?from={}'>\n"
+            return img.format(urllib.parse.quote_plus(x))
+        else:
+            x = x[1:-1]
+            return r"![](https://math.now.sh?from={})".format(
+                urllib.parse.quote_plus(x)
+            )
+
+    return re.sub(r"\${2}([^$]+)\${2}|\$(.+?)\$", lambda x: toimage(x.group()), text)

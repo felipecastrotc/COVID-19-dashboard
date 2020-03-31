@@ -16,21 +16,6 @@ import urllib.parse
 import re
 
 
-def convert(text):
-    def toimage(x):
-        if x[1] and x[-2] == r"$":
-            x = x[2:-2]
-            img = "\n<img src='https://math.now.sh?from={}'>\n"
-            return img.format(urllib.parse.quote_plus(x))
-        else:
-            x = x[1:-1]
-            return r"![](https://math.now.sh?from={})".format(
-                urllib.parse.quote_plus(x)
-            )
-
-    return re.sub(r"\${2}([^$]+)\${2}|\$(.+?)\$", lambda x: toimage(x.group()), text)
-
-
 # get relative data folder
 PATH = pathlib.Path(__file__).parent
 DATA_PATH = PATH.joinpath("data").resolve()
@@ -499,11 +484,11 @@ def grab_clear_graph(nw_graph, g_clk, c_clk, graphs, curr_graph, g_clkd, c_clkd)
     except:
         curr_graph = dict(data=[])
     try:
-        g_clkd = json.loads(g_clkd)  # integer
+        g_clkd = int(g_clkd)  # integer
     except:
         g_clkd = 0
     try:
-        c_clkd = json.loads(c_clkd)  # integer
+        c_clkd = int(c_clkd)  # integer
     except:
         c_clkd = 0
 
@@ -531,33 +516,6 @@ def grab_clear_graph(nw_graph, g_clk, c_clk, graphs, curr_graph, g_clkd, c_clkd)
     graphs = json.dumps(graphs)
 
     return out_graph, curr_graph, graphs, str(g_clk), str(c_clk)
-
-
-def gen_graph(graphs):
-    """
-    List of plotly figures -> plotly figure
-
-    Convert a list of plotly figures (dictionaries) to a single plotly figure.
-
-    Parameters:
-    graph (list): list of plotly figures 
-
-    Returns:
-    dict: A plotly figure
-
-    """
-    # if type(graphs) == list:
-    #     graphs = [i for i in graphs if i]
-    #     if len(graphs) > 0:
-    data = []
-    layout = []
-    for gr in graphs:
-        if gr:
-            for gr_dt in gr["data"]:
-                data += [gr_dt]
-            layout = gr["layout"]
-
-    return dict(data=data, layout=layout)
 
 
 @app.callback(
