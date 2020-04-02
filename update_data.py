@@ -19,7 +19,8 @@ df_dth = df_dth.set_index(cnt_rgn)
 df_rec = df_rec.set_index(cnt_rgn)
 
 # Join the datasets
-df = pd.concat([df_cfm, df_dth, df_rec], keys=["confirmed", "deaths", "recovered"])
+df = pd.concat([df_cfm, df_dth, df_rec], keys=[
+               "confirmed", "deaths", "recovered"])
 df = df.swaplevel(1, 0)
 df = df.sort_index()
 
@@ -27,3 +28,9 @@ df = df.sort_index()
 date_col = zip(pd.to_datetime(df.columns[3:]), df.columns[3:])
 df = df.rename(columns={ufmt: str(fmt.date()) for fmt, ufmt in date_col})
 df.to_hdf("./data/covid19.h5", "covid19_data")
+
+# ddata_path = "./data/csse_covid_19_data/csse_covid_19_daily_reports/"
+# cv_day = "04-01-2020.csv"
+
+# # Read .csv files
+# df_day = pd.read_csv(ddata_path + cv_day)
