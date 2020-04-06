@@ -10,7 +10,9 @@ import numpy as np
 from utils import *
 from datetime import timedelta
 import datetime
+from matplotlib import cm
 import json
+import plotly.graph_objects as go
 
 import urllib.parse
 import re
@@ -36,12 +38,24 @@ df = pd.read_hdf("./data/covid19.h5", "covid19_data")
 
 # Available data
 ctry_arr = df.index.levels[0].values
-dates_arr = pd.to_datetime(df.columns[3:].values)
+dates_arr = pd.to_datetime(df.columns[3:-1].values)
 sts_arr = np.unique(df.index.levels[1].values)
 
 # Buttons options
 ctry_opts = [{"label": ctry, "value": ctry} for ctry in ctry_arr]
 
+# Slider world
+dt_opt_sldr_wrld = np.linspace(0, dates_arr.shape[0] - 1, 20, dtype=int)
+dt_sldr_wrld = {
+    int(i): {
+        "label": dates_arr[i].strftime("%d/%m/%y"),
+        "style": {"transform": "rotate(45deg)"},
+    }
+    for i in dt_opt_sldr_wrld
+}
+dt_max_sldr = dates_arr.shape[0] - 1
+
+# Slider countries
 dt_opt_sldr = np.linspace(0, dates_arr.shape[0] - 1, 10, dtype=int)
 dt_sldr = {
     int(i): {
@@ -51,7 +65,6 @@ dt_sldr = {
     for i in dt_opt_sldr
 }
 dt_max_sldr = dates_arr.shape[0] - 1
-
 
 # Graphs
 pred_graph = [[]]
@@ -63,7 +76,17 @@ clear_click = None
 
 app.title = "COVID-19 - Status & Predictions"
 
-mapbox_access_token = "pk.eyJ1IjoiamFja2x1byIsImEiOiJjajNlcnh3MzEwMHZtMzNueGw3NWw5ZXF5In0.fk8k06T96Ml9CLGgKmk81w"
+# Colorscales
+n_color = 6
+cmap = cm.get_cmap("Blues")
+
+blues = []
+for i in range(n_color):
+    color_tp = tuple((np.array(cmap(i / (n_color - 1))[0:-1]) * 255).astype(int))
+    color = "rgb" + str(color_tp)
+    blues += [[10 ** (-(n_color - i - 1)), color]]
+blues[0][0] = 0.0
+
 
 layout = dict(
     autosize=True,
@@ -74,12 +97,6 @@ layout = dict(
     paper_bgcolor="#F9F9F9",
     legend=dict(font=dict(size=10), orientation="h"),
     title="Satellite Overview",
-    mapbox=dict(
-        accesstoken=mapbox_access_token,
-        style="light",
-        center=dict(lon=-78.05, lat=42.54),
-        zoom=7,
-    ),
 )
 
 # Create app layout
@@ -108,8 +125,7 @@ app.layout = html.Div(
                     [
                         html.Div(
                             [
-                                html.H3(
-                                    "COVID-19", style={"margin-bottom": "0px"},),
+                                html.H3("COVID-19", style={"margin-bottom": "0px"},),
                                 html.H5(
                                     "Status & Predictions", style={"margin-top": "0px"}
                                 ),
@@ -134,12 +150,131 @@ app.layout = html.Div(
             className="row flex-display",
             style={"margin-bottom": "25px"},
         ),
+        # Stats
         html.Div(
             [
                 html.Div(
+                    [html.H6(id="cases_tot_txt"), html.P("No. of cases"),],
+                    id="ncases_tot_txt",
+                    className="mini_container",
+                ),
+                html.Div(
+                    [html.H6(id="deaths_tot_txt"), html.P("No. of deaths"),],
+                    id="ndeaths_tot_txt",
+                    className="mini_container",
+                ),
+                html.Div(
+                    [html.H6(id="recv_tot_txt"), html.P("No. of recovered"),],
+                    id="nrecv_tot_txt",
+                    className="mini_container",
+                ),
+                html.Div(
+                    [html.H6(id="act_tot_txt"), html.P("No. of active"),],
+                    id="nact_tot_txt",
+                    className="mini_container",
+                ),
+            ],
+            id="info-container",
+            className="row container-display",
+            style={"display": "none"},
+        ),
+        # First row of graphs
+        html.Div(
+            [
+                html.Div(
+                    [dcc.Graph(id="world_graph")],
+                    className="pretty_container seven columns",
+                ),
+                html.Div(
                     [
-                        html.P("Temporal evolution:",
-                               className="control_label"),
+                        html.Div(
+                            [dcc.Graph(id="status_graph")],
+                            id="countGraphContainer",
+                            className="pretty_container",
+                        ),
+                    ],
+                    id="right-column-first-row",
+                    className="five columns",
+                ),
+            ],
+            className="row flex-display",
+        ),
+        # Menu -> First row
+        html.Div(
+            [
+                # Data options
+                html.Div(
+                    [
+                        html.P("Data to analyse:", className="control_label"),
+                        dcc.RadioItems(
+                            id="world_status_selector",
+                            options=[
+                                {"label": "Confirmed ", "value": "confirmed"},
+                                {"label": "Deaths ", "value": "deaths"},
+                                {"label": "Recovered ", "value": "recovered"},
+                            ],
+                            value="confirmed",
+                            labelStyle={"display": "inline-block"},
+                            className="dcc_control",
+                        ),
+                        # Using empty lines to enforce the margins
+                        html.P("   ", className="control_label"),
+                    ],
+                    className="pretty_container three columns",
+                    id="wrld-data-filter-options",
+                ),
+                # Date options
+                html.Div(
+                    [
+                        html.P("Period to analyse: ", className="control_label"),
+                        # Using empty lines to enforce the margins
+                        html.P("   ", className="control_label"),
+                        dcc.Slider(
+                            id="date_slider_wrld",
+                            step=1,
+                            min=0,
+                            max=dt_max_sldr,
+                            value=dt_max_sldr,
+                            marks=dt_sldr_wrld,
+                        ),
+                        # Using empty lines to enforce the margins
+                        html.P("   ", className="control_label"),
+                        html.P("   ", className="control_label"),
+                    ],
+                    className="pretty_container nine columns",
+                    id="wrld-date-slider-options",
+                ),
+            ],
+            className="pretty_container",
+        ),
+        # Second row of graphs
+        html.Div(
+            [
+                html.Div(
+                    [dcc.Graph(id="evo_graph")],
+                    className="pretty_container seven columns",
+                ),
+                html.Div(
+                    [
+                        html.Div(
+                            [dcc.Graph(id="status_slct_graph")],
+                            id="coutry-slct-graphs",
+                            className="pretty_container",
+                        ),
+                    ],
+                    id="right-column",
+                    className="five columns",
+                ),
+            ],
+            className="row flex-display",
+        ),
+        # Menu -> second row
+        html.Div(
+            [
+                # Data options
+                html.Div(
+                    [
+                        html.P("Data to analyse:", className="control_label"),
                         dcc.RadioItems(
                             id="temporal_status_selector",
                             options=[
@@ -151,134 +286,39 @@ app.layout = html.Div(
                             labelStyle={"display": "inline-block"},
                             className="dcc_control",
                         ),
+                        # Using empty lines to enforce the margins
+                        html.P("   ", className="control_label"),
+                    ],
+                    className="pretty_container three columns",
+                    id="data-filter-options",
+                    style={"margin-top": 0},
+                ),
+                # Country options
+                html.Div(
+                    [
+                        html.P("Countries to analyse:", className="control_label"),
                         dcc.Dropdown(
                             id="countries_slct",
                             options=ctry_opts,
                             multi=True,
-                            value=["China", "Italy", "US", "Spain", "Germany"],
-                            className="dcc_control",
-                        ),
-                        dcc.Markdown(
-                            """
-                            **About the model:**
-                            The model used to predict is a sigmoid function adjusted using least squares method. It is not always possible to fit this function. Therefore, some cases do not work. This is a very simple model, so, take the result with a grain of salt."""
-                        ),
-                        html.P("Prediction:", className="control_label"),
-                        dcc.RadioItems(
-                            id="prediction_status_selector",
-                            options=[
-                                {"label": "Confirmed ", "value": "confirmed"},
-                                {"label": "Deaths ", "value": "deaths"},
-                                {"label": "Recovered ", "value": "recovered"},
+                            value=[
+                                "China",
+                                "Italy",
+                                "United States",
+                                "Spain",
+                                "Germany",
                             ],
-                            value="confirmed",
-                            labelStyle={"display": "inline-block"},
                             className="dcc_control",
-                        ),
-                        dcc.Dropdown(
-                            id="country_slct",
-                            options=ctry_opts,
-                            multi=False,
-                            value="Italy",
-                            className="dcc_control",
-                        ),
-                        html.Div(
-                            [
-                                dcc.Markdown(
-                                    """The model is presented below:"""),
-                                html.P(id="mdl_unc_txt"),
-                                html.P(id="mdl_eq_txt"),
-                            ],
-                            id="mdl_cfg",
-                            className="mini_container",
-                        ),
-                        html.Div(
-                            [
-                                dcc.Slider(
-                                    id="date_slider_pred",
-                                    step=1,
-                                    min=0,
-                                    max=dt_max_sldr,
-                                    value=dt_max_sldr,
-                                    marks=dt_sldr,
-                                ),
-                                html.Div(
-                                    [
-                                        html.Div(id="date_selected"),
-                                        html.Button(
-                                            "Clear",
-                                            style={"margin-right": 10},
-                                            id="clear_graph_bt",
-                                        ),
-                                        html.Button(
-                                            "Grab",
-                                            n_clicks=0,
-                                            type="submit",
-                                            id="grab_graph_bt",
-                                        ),
-                                    ],
-                                    id="slider_buttons",
-                                    style={"margin-top": 50},
-                                ),
-                            ],
-                            id="date_slider",
                         ),
                     ],
-                    className="pretty_container four columns",
-                    id="cross-filter-options",
-                ),
-                html.Div(
-                    [
-                        html.Div(
-                            [
-                                html.Div(
-                                    [
-                                        html.H6(id="cases_tot_txt"),
-                                        html.P("No. of cases"),
-                                    ],
-                                    id="ncases_tot_txt",
-                                    className="mini_container",
-                                ),
-                                html.Div(
-                                    [
-                                        html.H6(id="deaths_tot_txt"),
-                                        html.P("No. of deaths"),
-                                    ],
-                                    id="ndeaths_tot_txt",
-                                    className="mini_container",
-                                ),
-                                html.Div(
-                                    [
-                                        html.H6(id="recv_tot_txt"),
-                                        html.P("No. of recovered"),
-                                    ],
-                                    id="nrecv_tot_txt",
-                                    className="mini_container",
-                                ),
-                                html.Div(
-                                    [
-                                        html.H6(id="act_tot_txt"),
-                                        html.P("No. of active"),
-                                    ],
-                                    id="nact_tot_txt",
-                                    className="mini_container",
-                                ),
-                            ],
-                            id="info-container",
-                            className="row container-display",
-                        ),
-                        html.Div(
-                            [dcc.Graph(id="status_graph")],
-                            id="countGraphContainer",
-                            className="pretty_container",
-                        ),
-                    ],
-                    id="right-column",
-                    className="eight columns",
+                    className="pretty_container nine columns",
+                    id="country-filter-options",
+                    style={"margin-top": 0},
                 ),
             ],
-            className="row flex-display",
+            className="pretty_container",
         ),
+        # Third row of graphs
         html.Div(
             [
                 html.Div(
@@ -291,6 +331,113 @@ app.layout = html.Div(
                 ),
             ],
             className="row flex-display",
+        ),
+        # Prediction menu
+        html.Div(
+            [
+                # # Explanation about the model
+                # html.Div(
+                #     [
+                #         dcc.Markdown(
+                #             """
+                #             **About the model:**
+                #             The model used to predict is a sigmoid function adjusted using least squares method. It is not always possible to fit this function. Therefore, some cases do not work. This is a very simple model, so, take the result with a grain of salt."""
+                #         ),
+                #     ],
+                #     className="pretty_container two columns",
+                # ),
+                # Radio buttons
+                html.Div(
+                    [
+                        html.P("Prediction:", className="control_label"),
+                        dcc.RadioItems(
+                            id="prediction_status_selector",
+                            options=[
+                                {"label": "Confirmed ", "value": "confirmed"},
+                                {"label": "Deaths ", "value": "deaths"},
+                                {"label": "Recovered ", "value": "recovered"},
+                            ],
+                            value="confirmed",
+                            labelStyle={"display": "inline-block"},
+                            className="dcc_control",
+                        ),
+                    ],
+                    className="pretty_container three columns",
+                ),
+                # Country menu
+                html.Div(
+                    [
+                        html.P("Country:", className="control_label"),
+                        dcc.Dropdown(
+                            id="country_slct",
+                            options=ctry_opts,
+                            multi=False,
+                            value="Italy",
+                            className="dcc_control",
+                        ),
+                    ],
+                    style={"margin-top": 0},
+                    className="pretty_container two columns",
+                ),
+                # Date slider
+                html.Div(
+                    [
+                        html.P("Period to analyse:", className="control_label"),
+                        # Using empty lines to enforce the margins
+                        html.P("   ", className="control_label"),
+                        dcc.Slider(
+                            id="date_slider_pred",
+                            step=1,
+                            min=0,
+                            max=dt_max_sldr,
+                            value=dt_max_sldr,
+                            marks=dt_sldr,
+                        ),
+                        # Using empty lines to enforce the margins
+                        html.P("   ", className="control_label"),
+                        html.P("   ", className="control_label"),
+                    ],
+                    className="pretty_container four columns",
+                    id="date-slider-options",
+                    style={"margin-top": 0},
+                ),
+                # Grabers
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div(id="date_selected"),
+                                html.Button(
+                                    "Clear",
+                                    style={"margin-right": 10},
+                                    id="clear_graph_bt",
+                                ),
+                                html.Button(
+                                    "Grab",
+                                    n_clicks=0,
+                                    type="submit",
+                                    id="grab_graph_bt",
+                                ),
+                            ],
+                            id="slider_buttons",
+                        ),
+                    ],
+                    id="date_slider",
+                    className="pretty_container three columns",
+                ),
+                # Model image
+                html.Div(
+                    [
+                        dcc.Markdown("""The model is presented below:"""),
+                        html.P(id="mdl_unc_txt"),
+                        html.P(id="mdl_eq_txt"),
+                    ],
+                    id="mdl_cfg",
+                    className="pretty_container twelve columns",
+                ),
+            ],
+            className="pretty_container twelve columns",
+            id="cross-filter-options",
         ),
         html.Div(id="new_graph_data", style={"display": "none"}),
         html.Div(id="curr_graph_data", style={"display": "none"}),
@@ -315,60 +462,50 @@ app.clientside_callback(
 # Update status text
 @app.callback(
     Output("cases_tot_txt", "children"),
-    [Input("countries_slct", "value"), Input(
-        "temporal_status_selector", "value"), ],
+    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
 )
 def update_cases_text(countries_slct, temporal_status_selector):
     # Slice data
     slc_date = slice("2020-01-22", None)
-    df_view = df.loc[(countries_slct, "confirmed"),
-                     slc_date].groupby(CTRY_K).sum().T
+    df_view = df.loc[(countries_slct, "confirmed"), slc_date].groupby(CTRY_K).sum().T
     # Get data
     return "{:,}".format(df_view.max().sum())
 
 
 @app.callback(
     Output("deaths_tot_txt", "children"),
-    [Input("countries_slct", "value"), Input(
-        "temporal_status_selector", "value"), ],
+    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
 )
 def update_deaths_text(countries_slct, temporal_status_selector):
     # Slice data
     slc_date = slice("2020-01-22", None)
-    df_view = df.loc[(countries_slct, "deaths"),
-                     slc_date].groupby(CTRY_K).sum().T
+    df_view = df.loc[(countries_slct, "deaths"), slc_date].groupby(CTRY_K).sum().T
     # Get data
     return "{:,}".format(df_view.max().sum())
 
 
 @app.callback(
     Output("recv_tot_txt", "children"),
-    [Input("countries_slct", "value"), Input(
-        "temporal_status_selector", "value"), ],
+    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
 )
 def update_recovered_text(countries_slct, temporal_status_selector):
     # Slice data
     slc_date = slice("2020-01-22", None)
-    df_view = df.loc[(countries_slct, "recovered"),
-                     slc_date].groupby(CTRY_K).sum().T
+    df_view = df.loc[(countries_slct, "recovered"), slc_date].groupby(CTRY_K).sum().T
     # Get data
     return "{:,}".format(df_view.max().sum())
 
 
 @app.callback(
     Output("act_tot_txt", "children"),
-    [Input("countries_slct", "value"), Input(
-        "temporal_status_selector", "value"), ],
+    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
 )
 def update_active_text(countries_slct, temporal_status_selector):
     # Slice data
     slc_date = slice("2020-01-22", None)
-    df_cview = df.loc[(countries_slct, "confirmed"),
-                      slc_date].groupby(CTRY_K).sum().T
-    df_dview = df.loc[(countries_slct, "deaths"),
-                      slc_date].groupby(CTRY_K).sum().T
-    df_rview = df.loc[(countries_slct, "recovered"),
-                      slc_date].groupby(CTRY_K).sum().T
+    df_cview = df.loc[(countries_slct, "confirmed"), slc_date].groupby(CTRY_K).sum().T
+    df_dview = df.loc[(countries_slct, "deaths"), slc_date].groupby(CTRY_K).sum().T
+    df_rview = df.loc[(countries_slct, "recovered"), slc_date].groupby(CTRY_K).sum().T
     # Get data
     act = "{:,}".format(
         df_cview.max().sum() - df_dview.max().sum() - df_rview.max().sum()
@@ -377,7 +514,7 @@ def update_active_text(countries_slct, temporal_status_selector):
 
 
 @app.callback(
-    Output("mdl_eq_txt", "children"), [Input("model_data", "children"), ],
+    Output("mdl_eq_txt", "children"), [Input("model_data", "children"),],
 )
 def upd_equation(mdl):
     """
@@ -398,7 +535,6 @@ def upd_equation(mdl):
     """
     # Get fit data
     def convert(text):
-
         def toimage(x):
             if x[1] and x[-2] == r"$":
                 x = x[2:-2]
@@ -410,7 +546,9 @@ def upd_equation(mdl):
                     urllib.parse.quote_plus(x)
                 )
 
-        return re.sub(r"\${2}([^$]+)\${2}|\$(.+?)\$", lambda x: toimage(x.group()), text)
+        return re.sub(
+            r"\${2}([^$]+)\${2}|\$(.+?)\$", lambda x: toimage(x.group()), text
+        )
 
     try:
         fit = json.loads(mdl)
@@ -434,8 +572,7 @@ def upd_equation(mdl):
 
 
 @app.callback(
-    Output("date_selected", "children"), [
-        Input("date_slider_pred", "value"), ],
+    Output("date_selected", "children"), [Input("date_slider_pred", "value"),],
 )
 def upd_slider_slected(sldr_idx):
     return "Date selected: " + dates_arr[sldr_idx].strftime("%d/%m/%y")
@@ -543,10 +680,46 @@ def grab_clear_graph(nw_graph, g_clk, c_clk, graphs, curr_graph, g_clkd, c_clkd)
 
 @app.callback(
     Output("status_graph", "figure"),
-    [Input("countries_slct", "value"), Input(
-        "temporal_status_selector", "value"), ],
+    [Input("world_status_selector", "value"), Input("date_slider_wrld", "value"),],
 )
-def upd_status_graph(ctry, sts):
+def upd_status_graph(sts, date):
+    """
+    It updates the status graph.
+
+    Parameters:
+    ctry (str): Country to pull data
+    sts (str): Confirmed cases or deaths or recovered
+
+    Returns:
+    dict: The plotly figure
+
+    """
+    # Get the date
+    col_date = dates_arr[-1].strftime("%Y-%m-%d")
+    cases = df.loc[:, col_date].groupby("status").sum()
+    cases["active"] = cases["confirmed"] - cases["deaths"] - cases["recovered"]
+
+    # Remove the confirmed cases
+    del cases["confirmed"]
+
+    fig = go.Figure(
+        data=go.Pie(
+            labels=cases.index,
+            values=cases.values,
+            textinfo="percent+value+label",
+            hole=0.3,
+        )
+    )
+
+    figure = fig.to_dict()
+    return figure
+
+
+@app.callback(
+    Output("evo_graph", "figure"),
+    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
+)
+def upd_evo_graph(ctry, sts):
     """
     It updates the status graph.
 
@@ -587,6 +760,102 @@ def upd_status_graph(ctry, sts):
     layout_individual["yaxis_title"] = "Days"
 
     figure = dict(data=data, layout=layout_individual)
+    return figure
+
+
+@app.callback(
+    Output("status_slct_graph", "figure"),
+    [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
+)
+def upd_status_slct_graph(ctry, sts):
+    """
+    It updates the status graph.
+
+    Parameters:
+    ctry (str): Country to pull data
+    sts (str): Confirmed cases or deaths or recovered
+
+    Returns:
+    dict: The plotly figure
+
+    """
+
+    # Get a slice with the selected countries
+    ix = pd.IndexSlice
+    slc_st = ix[ctry, :]
+
+    # Get the date
+    col_date = dates_arr[-1].strftime("%Y-%m-%d")
+
+    cases = df.loc[slc_st, col_date].groupby("status").sum()
+    cases["active"] = cases["confirmed"] - cases["deaths"] - cases["recovered"]
+
+    # Remove the confirmed cases
+    del cases["confirmed"]
+
+    fig = go.Figure(
+        data=go.Pie(
+            labels=cases.index,
+            values=cases.values,
+            textinfo="percent+value+label",
+            hole=0.3,
+        )
+    )
+
+    figure = fig.to_dict()
+    return figure
+
+
+@app.callback(
+    Output("world_graph", "figure"),
+    [Input("world_status_selector", "value"), Input("date_slider_wrld", "value")],
+)
+def upd_world_graph(sts, sldr_idx):
+    """
+    It updates the status graph.
+
+    Parameters:
+    ctry (str): Country to pull data
+    sts (str): Confirmed cases or deaths or recovered
+
+    Returns:
+    dict: The plotly figure
+
+    """
+
+    # Get slicers
+    ix = pd.IndexSlice
+    slc_st = ix[:, sts]
+
+    col_date = str(dates_arr[sldr_idx].date())
+
+    # Get data
+    iso = df.loc[slc_st, "ISO"].groupby(CTRY_K).min()
+    cases = df.loc[slc_st, col_date].groupby(CTRY_K).sum()
+    ctry = df.index.unique(0)
+
+    fig = go.Figure(
+        data=go.Choropleth(
+            locations=iso,
+            z=cases,
+            text=ctry,
+            colorscale=blues,
+            marker_line_color="darkgray",
+            marker_line_width=0.5,
+            colorbar_title="Cases",
+        )
+    )
+
+    fig.update_layout(
+        title_text="Number of {} cases".format(sts),
+        margin=dict(l=0, r=0, b=0, t=40),
+        geo=dict(
+            showframe=False, showcoastlines=False, projection_type="equirectangular"
+        ),
+        annotations=[dict(x=0.55, y=0.1, xref="paper", yref="paper",)],
+    )
+
+    figure = fig.to_dict()
     return figure
 
 
@@ -683,8 +952,7 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
             name="95% Confidence region",
             x=np.hstack([days, pred_day]),
             y=y_nom[day_start:] - 1.96 * y_std[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="gray", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="gray", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -693,8 +961,7 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
             showlegend=False,
             x=np.hstack([days, pred_day]),
             y=y_nom[day_start:] + 1.96 * y_std[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="gray", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="gray", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -702,8 +969,7 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
             name="95% Prediction band",
             x=np.hstack([days, pred_day]),
             y=up_band[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="black", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="black", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -712,8 +978,7 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
             showlegend=False,
             x=np.hstack([days, pred_day]),
             y=lw_band[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="black", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="black", dash="dash"),
         ),
     ]
 
@@ -818,8 +1083,7 @@ def upd_pred_graph(ctry, sts, sldr_idx):
             name="95% Confidence region",
             x=np.hstack([days, pred_day]),
             y=y_nom[day_start:] - 1.96 * y_std[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="gray", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="gray", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -828,8 +1092,7 @@ def upd_pred_graph(ctry, sts, sldr_idx):
             showlegend=False,
             x=np.hstack([days, pred_day]),
             y=y_nom[day_start:] + 1.96 * y_std[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="gray", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="gray", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -837,8 +1100,7 @@ def upd_pred_graph(ctry, sts, sldr_idx):
             name="95% Prediction band",
             x=np.hstack([days, pred_day]),
             y=up_band[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="black", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="black", dash="dash"),
         ),
         dict(
             type="scatter",
@@ -847,8 +1109,7 @@ def upd_pred_graph(ctry, sts, sldr_idx):
             showlegend=False,
             x=np.hstack([days, pred_day]),
             y=lw_band[day_start:],
-            line=dict(shape="spline", smoothing=2,
-                      width=1, color="black", dash="dash"),
+            line=dict(shape="spline", smoothing=2, width=1, color="black", dash="dash"),
         ),
     ]
 

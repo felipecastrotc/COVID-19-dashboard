@@ -89,8 +89,7 @@ def fit_curve(df, country, status, start_date, end_date=None):
 
     # Select the data
     slc_date = slice(start_date, end_date)
-    y_data = df.loc[(country, status), slc_date].groupby(
-        CTRY_K).sum().values[0]
+    y_data = df.loc[(country, status), slc_date].groupby(CTRY_K).sum().values[0]
 
     # Generate a dummy x_data
     x_data = np.arange(0, y_data.shape[0])
