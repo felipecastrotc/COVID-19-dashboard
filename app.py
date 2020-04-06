@@ -712,6 +712,11 @@ def upd_status_graph(sts, sldr_idx):
             hole=0.3,
         )
     )
+    
+    fig.update_layout(
+        plot_bgcolor="#F9F9F9",
+        paper_bgcolor="#F9F9F9",
+    )
 
     figure = fig.to_dict()
     return figure
@@ -805,6 +810,11 @@ def upd_status_slct_graph(ctry, sts):
         )
     )
 
+    fig.update_layout(
+        plot_bgcolor="#F9F9F9",
+        paper_bgcolor="#F9F9F9",
+    )
+    
     figure = fig.to_dict()
     return figure
 
@@ -854,9 +864,13 @@ def upd_world_graph(sts, sldr_idx):
         title_text="Number of {} cases".format(sts),
         margin=dict(l=0, r=0, b=0, t=40),
         geo=dict(
-            showframe=False, showcoastlines=False, projection_type="equirectangular"
+            showframe=False,
+            showcoastlines=False,
+            projection_type="equirectangular",
         ),
         annotations=[dict(x=0.55, y=0.1, xref="paper", yref="paper",)],
+        plot_bgcolor="#F9F9F9",
+        paper_bgcolor="#F9F9F9",
     )
 
     figure = fig.to_dict()
