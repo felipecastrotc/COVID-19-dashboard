@@ -32,7 +32,7 @@ df.index.names = list(df.index.names)[0:-1] + ["status"]
 date_col = zip(pd.to_datetime(df.columns[2:]), df.columns[2:])
 df = df.rename(columns={ufmt: str(fmt.date()) for fmt, ufmt in date_col})
 
-today = datetime.datetime.today()
+today = datetime.datetime.today().date()
 
 tdy_str = today.strftime("%m-%d-%Y")
 tdy_ymd = today.strftime("%Y-%m-%d")
@@ -47,7 +47,7 @@ col_trs = {
     "Deaths": tdy_ymd,
 }
 
-if today >= pd.to_datetime(df.columns[-1]):
+if today > pd.to_datetime(df.columns[-1]).date():
     day_fl = data_path_day + tdy_str + ".csv"
     if os.path.exists(day_fl):
         # Get the daily data
@@ -81,7 +81,6 @@ if today >= pd.to_datetime(df.columns[-1]):
 
         df = pd.concat([df, df_day])
 
-
 # Local translation
 key2iso = {"US": "United States"}
 df.rename(index=key2iso, level=0, inplace=True)
@@ -104,6 +103,8 @@ for ctry in ctry_lst:
 
 df.reset_index(inplace=True)
 df.set_index(["Country/Region", "status"], inplace=True)
+
+df
 
 df.to_hdf("./data/covid19.h5", "covid19_data")
 

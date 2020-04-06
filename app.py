@@ -682,7 +682,8 @@ def grab_clear_graph(nw_graph, g_clk, c_clk, graphs, curr_graph, g_clkd, c_clkd)
     Output("status_graph", "figure"),
     [Input("world_status_selector", "value"), Input("date_slider_wrld", "value"),],
 )
-def upd_status_graph(sts, date):
+def upd_status_graph(sts, sldr_idx):
+    # TODO: documentation
     """
     It updates the status graph.
 
@@ -695,7 +696,8 @@ def upd_status_graph(sts, date):
 
     """
     # Get the date
-    col_date = dates_arr[-1].strftime("%Y-%m-%d")
+    col_date = str(dates_arr[sldr_idx].date())
+    
     cases = df.loc[:, col_date].groupby("status").sum()
     cases["active"] = cases["confirmed"] - cases["deaths"] - cases["recovered"]
 
@@ -768,6 +770,7 @@ def upd_evo_graph(ctry, sts):
     [Input("countries_slct", "value"), Input("temporal_status_selector", "value"),],
 )
 def upd_status_slct_graph(ctry, sts):
+    # TODO: documentation
     """
     It updates the status graph.
 
@@ -811,6 +814,7 @@ def upd_status_slct_graph(ctry, sts):
     [Input("world_status_selector", "value"), Input("date_slider_wrld", "value")],
 )
 def upd_world_graph(sts, sldr_idx):
+    # TODO: documentation
     """
     It updates the status graph.
 
