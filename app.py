@@ -372,7 +372,7 @@ app.layout = html.Div(
                             id="country_slct",
                             options=ctry_opts,
                             multi=False,
-                            value="Italy",
+                            value="United States",
                             className="dcc_control",
                         ),
                     ],
