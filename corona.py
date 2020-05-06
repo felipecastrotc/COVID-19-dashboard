@@ -147,3 +147,85 @@ plt.plot(np.diff(y_data))
 
 
 # %matplotlib qt5
+
+plt.tight_layout()
+countries = ["China", "US", "Japan", "Italy", "Brazil", "Germany", "Spain"]
+date = "2020-01-22"
+status = "confirmed"
+cnt_rgn = 'Country/Region'
+
+countries = 'Brazil'
+status = "deaths"
+# Cases
+x = df.loc[(countries, status), date:].groupby(cnt_rgn).sum()
+df.loc[(countries, status), date:].groupby(cnt_rgn).sum().T.plot()
+
+x.T.diff().plot(kind='hist')
+
+
+#%%
+x = np.linspace(1, 10, 500)
+# y = 1*x**(1/1)*np.exp(-0.6*x**2)
+y = 1/(1 + (x**0)*np.exp(-10*(x- 2)))
+plt.plot(x, y)
+plt.plot(x[1:], np.diff(y)*10)
+y = 1/((1 + np.exp(-10*(x- 2)))**3)
+plt.plot(x, y)
+#%%
+xe = 1.2
+xm = 1
+x = np.linspace(0, 2*xe-xm, 500)
+y = (1 + (xe-x)/((xe-xm)))*(x/xe)**(xe/(xe-xm))
+plt.plot(x, y)
+plt.plot(x, np.cumsum(y)/160)
+# %%# %%
+x = np.linspace(0, 10, 500)
+r = 60
+alpha = 2
+beta = 2
+gamma = 4
+K = 10
+y = r*x**(alpha)*((1 - (x/K)**beta)**gamma)
+plt.plot(x, y*100)
+plt.plot(x, np.cumsum(y))
+
+# %%
+import scipy.optimize as opt
+
+def func_cum(x, r, alpha, beta, gamma, K):
+    return np.cumsum(r*x**(alpha)*((1 - (x/K)**beta)**gamma))
+
+def func(x, r, alpha, beta, gamma, K):
+    alpha = 1
+    gamma = 1
+    return r*x**(alpha)*((1 - (x/K)**beta)**gamma)
+
+status = 'confirmed'
+yp = df.loc[(countries, status), date:].groupby(cnt_rgn).sum()
+ypc = np.squeeze(yp.values)
+ypc = ypc[np.where(ypc > 0)[0][0]:]
+yp = np.squeeze(yp.T.diff().values)
+yp = yp[np.where(yp > 0)[0][0]:]
+
+x = np.arange(yp.shape[0])
+# bd = ([0, np.inf], [0, 10], [0, 10], [0, 10], [0, np.inf])
+# out = opt.curve_fit(func_cum, x, ypc, p0=out[0])
+# out = opt.curve_fit(func, x, yp, p0=[0.5, 2, 2, 4, 200])
+p = 40
+bd = ((0, 0, 0, 0, yp.shape[0]+p), (np.inf, 200, 200, 200, np.inf))
+out = opt.curve_fit(func, x, yp, p0=[0.5, 2, 2, 4, 200], bounds=bd)
+out[0]
+
+r, alpha, beta, gamma, K = out[0]
+# x = 48
+# r*x**(alpha)*((1 - (x/K)**beta)**gamma)
+# http://modelosysistemas.azc.uam.mx/texts/sa/logisticmodels.pdf
+xx = np.arange(yp.shape[0]+p)
+y = func(xx, r, alpha, beta, gamma, K)
+
+x = np.arange(yp.shape[0])
+plt.plot(xx, y)
+plt.plot(x, yp)
+
+plt.plot(xx, np.cumsum(y))
+plt.plot(x, ypc)
