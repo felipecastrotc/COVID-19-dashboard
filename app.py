@@ -32,6 +32,7 @@ server = app.server
 # ================================================================================
 # Keys
 CTRY_K = "Country/Region"
+first_date = "2020-01-22"
 
 # Data
 df = pd.read_hdf("./data/covid19.h5", "covid19_data")
@@ -40,6 +41,11 @@ df = pd.read_hdf("./data/covid19.h5", "covid19_data")
 ctry_arr = df.index.levels[0].values
 dates_arr = pd.to_datetime(df.columns[3:-1].values)
 sts_arr = np.unique(df.index.levels[1].values)
+
+# Get top 5
+total = df.loc[(slice(None), 'confirmed'), first_date:].groupby(CTRY_K)
+total = total.sum().iloc[:, -1].sort_values(ascending=False)
+top_5 = list(total.index[:5])
 
 # Buttons options
 ctry_opts = [{"label": ctry, "value": ctry} for ctry in ctry_arr]
@@ -301,13 +307,7 @@ app.layout = html.Div(
                             id="countries_slct",
                             options=ctry_opts,
                             multi=True,
-                            value=[
-                                "China",
-                                "Italy",
-                                "United States",
-                                "Spain",
-                                "Germany",
-                            ],
+                            value=top_5,
                             className="dcc_control",
                         ),
                     ],
@@ -466,7 +466,7 @@ app.clientside_callback(
 )
 def update_cases_text(countries_slct, temporal_status_selector):
     # Slice data
-    slc_date = slice("2020-01-22", None)
+    slc_date = slice(first_date, None)
     df_view = df.loc[(countries_slct, "confirmed"), slc_date].groupby(CTRY_K).sum().T
     # Get data
     return "{:,}".format(df_view.max().sum())
@@ -478,7 +478,7 @@ def update_cases_text(countries_slct, temporal_status_selector):
 )
 def update_deaths_text(countries_slct, temporal_status_selector):
     # Slice data
-    slc_date = slice("2020-01-22", None)
+    slc_date = slice(first_date, None)
     df_view = df.loc[(countries_slct, "deaths"), slc_date].groupby(CTRY_K).sum().T
     # Get data
     return "{:,}".format(df_view.max().sum())
@@ -490,7 +490,7 @@ def update_deaths_text(countries_slct, temporal_status_selector):
 )
 def update_recovered_text(countries_slct, temporal_status_selector):
     # Slice data
-    slc_date = slice("2020-01-22", None)
+    slc_date = slice(first_date, None)
     df_view = df.loc[(countries_slct, "recovered"), slc_date].groupby(CTRY_K).sum().T
     # Get data
     return "{:,}".format(df_view.max().sum())
@@ -502,7 +502,7 @@ def update_recovered_text(countries_slct, temporal_status_selector):
 )
 def update_active_text(countries_slct, temporal_status_selector):
     # Slice data
-    slc_date = slice("2020-01-22", None)
+    slc_date = slice(first_date, None)
     df_cview = df.loc[(countries_slct, "confirmed"), slc_date].groupby(CTRY_K).sum().T
     df_dview = df.loc[(countries_slct, "deaths"), slc_date].groupby(CTRY_K).sum().T
     df_rview = df.loc[(countries_slct, "recovered"), slc_date].groupby(CTRY_K).sum().T
@@ -743,7 +743,7 @@ def upd_evo_graph(ctry, sts):
     layout_individual = copy.deepcopy(layout)
 
     # Slice data
-    slc_date = slice("2020-01-22", None)
+    slc_date = slice(first_date, None)
 
     df_view = df.loc[(ctry, sts), slc_date].groupby(CTRY_K).sum().T
 
@@ -902,7 +902,7 @@ def upd_dpred_graph(ctry, sts, sldr_idx):
     # Get layout
     layout_individual = copy.deepcopy(layout)
 
-    start_date = "2020-01-22"
+    start_date = first_date
     end_date = str(dates_arr[sldr_idx].date())
     n_days = 30
 
@@ -1035,7 +1035,7 @@ def upd_pred_graph(ctry, sts, sldr_idx):
     # Get layout
     layout_individual = copy.deepcopy(layout)
 
-    start_date = "2020-01-22"
+    start_date = first_date
     end_date = str(dates_arr[sldr_idx].date())
     n_days = 30
 
